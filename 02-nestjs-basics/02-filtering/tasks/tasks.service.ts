@@ -40,12 +40,7 @@ export class TasksService {
     },
   ];
 
-  getFilteredTasks({
-    status,
-    sortBy,
-    page = 1,
-    limit = this.tasks.length,
-  }: GetTasksQueryDto): Task[] {
+  getFilteredTasks({ status, sortBy, page, limit }: GetTasksQueryDto): Task[] {
     return [
       this.filterTasks(status),
       this.sliceTasks(page, limit),
