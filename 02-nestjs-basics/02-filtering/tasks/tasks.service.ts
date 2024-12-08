@@ -1,5 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import { Task, TaskStatus } from "./task.model";
+import {
+  GetTaskQuerySortBy,
+  GetTasksQueryDto,
+} from "./dto/get-tasks-query.dto";
 
 @Injectable()
 export class TasksService {
@@ -36,9 +40,60 @@ export class TasksService {
     },
   ];
 
-  getFilteredTasks(
-    status?: TaskStatus,
-    page?: number,
-    limit?: number,
-  ): Task[] {}
+  getFilteredTasks({
+    status,
+    sortBy,
+    page = 1,
+    limit = this.tasks.length,
+  }: GetTasksQueryDto): Task[] {
+    return [
+      this.filterTasks(status),
+      this.sliceTasks(page, limit),
+      this.sortTasks(sortBy),
+    ].reduce((tasks, pipe) => pipe(tasks), this.tasks);
+  }
+
+  private filterTasks(status: TaskStatus) {
+    return (tasks: Task[]) => {
+      return status ? tasks.filter((task) => task.status === status) : tasks;
+    };
+  }
+
+  private sliceTasks(
+    page = 1,
+    limit = this.tasks.length,
+    _from = (page - 1) * limit,
+  ) {
+    return (tasks: Task[]) => {
+      return page || limit ? tasks.slice(_from, _from + limit) : tasks;
+    };
+  }
+
+  private sortTasks(sortBy: GetTaskQuerySortBy) {
+    return (tasks: Task[]) => {
+      switch (sortBy) {
+        case GetTaskQuerySortBy.STATUS: {
+          return this.sortTasksByStatus(tasks);
+        }
+        case GetTaskQuerySortBy.TITLE: {
+          return this.sortTasksByTitle(tasks);
+        }
+        default: {
+          return tasks;
+        }
+      }
+    };
+  }
+
+  private sortTasksByStatus(tasks: Task[]) {
+    return tasks.toSorted((a, b) => {
+      return Task.getStatusWeight(a.status) - Task.getStatusWeight(b.status);
+    });
+  }
+
+  private sortTasksByTitle(tasks: Task[]) {
+    return tasks.toSorted((a, b) => {
+      return a.title > b.title ? 1 : a.title < b.title ? -1 : 0;
+    });
+  }
 }
